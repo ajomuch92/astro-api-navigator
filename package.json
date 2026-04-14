@@ -1,23 +1,50 @@
 {
   "name": "astro-api-navigator",
-  "displayName": "astro-api-navigator",
-  "description": "Project to use with Astro projects to navigate to endpoints definition",
-  "version": "0.0.1",
+  "displayName": "Astro API Navigator",
+  "description": "Ctrl+Click on any API call to jump directly to the handler in your Astro project (pages/api)",
+  "version": "0.1.0",
+  "publisher": "ajomuch92",
   "engines": {
     "vscode": "^1.115.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "keywords": [
+    "astro",
+    "api",
+    "navigation",
+    "go-to-definition",
+    "fetch"
+  ],
+  "activationEvents": [
+    "workspaceContains:astro.config.*",
+    "workspaceContains:src/pages/api/**"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "astro-api-navigator.helloWorld",
-        "title": "Hello World"
+    "configuration": {
+      "title": "Astro API Navigator",
+      "properties": {
+        "astroApiNavigator.pagesDir": {
+          "type": "string",
+          "default": "src/pages",
+          "description": "Relative path to the Astro pages directory from the workspace root"
+        },
+        "astroApiNavigator.apiPatterns": {
+          "type": "array",
+          "default": [
+            "fetch\\(['\"`]({apiPath}[^'\"`?#]*)",
+            "\\$fetch\\(['\"`]({apiPath}[^'\"`?#]*)",
+            "axios\\.(?:get|post|put|patch|delete|head)\\(['\"`]({apiPath}[^'\"`?#]*)",
+            "axios\\(\\{[^}]*url:\\s*['\"`]({apiPath}[^'\"`?#]*)",
+            "useFetch\\(['\"`]({apiPath}[^'\"`?#]*)",
+            "useAsyncData\\([^,]+,\\s*\\(\\)\\s*=>\\s*\\$?fetch\\(['\"`]({apiPath}[^'\"`?#]*)"
+          ],
+          "description": "Regex patterns to detect API calls. Use {apiPath} as placeholder for the captured group."
+        }
       }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
