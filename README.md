@@ -1,27 +1,28 @@
 # Astro API Navigator
 
-> **Ctrl+Click on any API call → jump directly to the handler** in your Astro (or Nuxt/Next.js) project.
+> **Ctrl+Click on any API call → jump directly to the handler** in your Astro, SvelteKit, Nuxt, or Next.js project.
 
 ---
 
 ## Features
 
 - **Ctrl+Click navigation** from any API call to its handler function
-- **Smart HTTP method detection** — jumps to `GET`, `POST`, `PUT`, `PATCH`, or `DELETE` export specifically
+- **Smart HTTP method detection** — jumps to the exact `GET`, `POST`, `PUT`, `PATCH`, or `DELETE` export
+- **Template literal support** — resolves dynamic URLs like `` `/api/users/${id}/comments` `` to the correct handler
 - **Dynamic route support** — resolves `/api/users/42` → `pages/api/users/[id].ts`
 - **Catch-all routes** — resolves `/api/files/a/b/c` → `pages/api/files/[...path].ts`
-- **Hover tooltips** showing the resolved file, method, and dynamic params
+- **Hover tooltips** showing the resolved file, method, dynamic params, and template skeleton
 - **Underline decoration** on all resolvable API URLs in the editor
-- **Multi-framework support**:
-  - Astro (`src/pages/api/`)
-  - Nuxt 3 (`server/api/`) ← configure via settings
-  - Next.js App Router (`app/api/`) ← configure via settings
+- **Multi-framework support**: Astro, SvelteKit, Vue/Nuxt, React/Next.js
 
-### Supported call patterns
+---
+
+## Supported call patterns
 
 | Pattern | Example |
 |---|---|
 | `fetch()` | `fetch('/api/users')` |
+| `fetch()` template | `` fetch(`/api/users/${id}`) `` |
 | `$fetch()` | `$fetch('/api/users', { method: 'POST' })` |
 | `axios.method()` | `axios.get('/api/posts/1')` |
 | `axios({ url })` | `axios({ url: '/api/posts', method: 'PUT' })` |
@@ -31,9 +32,32 @@
 | `ky` | `ky.post('/api/submit').json()` |
 | `wretch` | `wretch('/api/upload').post(data)` |
 
-### Supported file types
+All patterns above also support template literals with `${...}` interpolations.
 
-Works when editing `.ts`, `.js`, `.tsx`, `.jsx`, `.vue`, and `.astro` files.
+---
+
+## Template literal URLs
+
+URLs with interpolations are fully supported. The extension strips query strings and resolves interpolated path segments as dynamic route params:
+
+```ts
+// Query string interpolation — strip ?... and resolve to /api/dependencies
+fetch(`/api/dependencies?package=${pkg}`)
+
+// Path segment interpolation — resolves to /api/users/[id]/comments
+fetch(`/api/users/${userId}/comments`)
+
+// Multiple interpolations
+axios.get(`/api/${section}/${id}`)  // -> /api/[section]/[id].ts or similar
+```
+
+The hover tooltip shows both the raw template and the resolved static skeleton so you always know what file it maps to.
+
+---
+
+## Supported file types
+
+Works when **editing** `.ts`, `.js`, `.tsx`, `.jsx`, `.vue`, `.svelte`, and `.astro` files.
 
 ---
 
@@ -51,56 +75,57 @@ The extension opens the handler file and positions the cursor at the correct exp
 
 | Setting | Default | Description |
 |---|---|---|
-| `astroApiNavigator.pagesDir` | `src/pages` | Path to Astro pages directory |
+| `astroApiNavigator.pagesDir` | `src/pages` | Path to the pages/routes directory |
 
-### Examples for other frameworks
+### Framework presets
 
-**Nuxt 3** (server routes in `server/api/`):
+**Astro** (default):
 ```json
-{
-  "astroApiNavigator.pagesDir": "server"
-}
+{ "astroApiNavigator.pagesDir": "src/pages" }
 ```
 
-**Next.js App Router** (`app/api/`):
+**SvelteKit**:
 ```json
-{
-  "astroApiNavigator.pagesDir": "app"
-}
+{ "astroApiNavigator.pagesDir": "src/routes" }
+```
+
+**Nuxt 3**:
+```json
+{ "astroApiNavigator.pagesDir": "server" }
+```
+
+**Next.js App Router**:
+```json
+{ "astroApiNavigator.pagesDir": "app" }
 ```
 
 ---
 
-## Project structure examples
+## Route resolution examples
 
 ### Static routes
 ```
-fetch('/api/users')           →  src/pages/api/users.ts
-fetch('/api/health')          →  src/pages/api/health.js
-fetch('/api/posts')           →  src/pages/api/posts/index.ts
+fetch('/api/users')            ->  src/pages/api/users.ts
+fetch('/api/health')           ->  src/pages/api/health.js
+fetch('/api/posts')            ->  src/pages/api/posts/index.ts
 ```
 
 ### Dynamic routes
 ```
-fetch('/api/posts/42')        →  src/pages/api/posts/[id].ts       (params: id=42)
-fetch('/api/users/7/comments')→  src/pages/api/users/[id]/comments.ts  (params: id=7)
+fetch('/api/posts/42')         ->  src/pages/api/posts/[id].ts        (params: id=42)
+fetch('/api/users/7/comments') ->  src/pages/api/users/[id]/comments.ts  (params: id=7)
+```
+
+### Template literal routes
+```
+fetch(`/api/dependencies?package=${pkg}`)   ->  src/pages/api/dependencies.ts
+fetch(`/api/users/${id}/comments`)          ->  src/pages/api/users/[id]/comments.ts
+axios.get(`/api/${section}/${itemId}`)      ->  src/pages/api/[section]/[itemId].ts
 ```
 
 ### Catch-all routes
 ```
-fetch('/api/files/docs/a.pdf')→  src/pages/api/files/[...path].ts  (params: path=docs/a.pdf)
-```
-
-### HTTP method detection
-```ts
-// In your component:
-axios.post('/api/users', data)
-//         ^^^^^^^^^^^
-//         Ctrl+Click → jumps to `export function POST(...)` in users.ts
-
-fetch('/api/users', { method: 'DELETE' })
-//         ^^^^^^^^^^^
-//         Ctrl+Click → jumps to `export function DELETE(...)` in users.ts
+fetch('/api/files/docs/a.pdf') ->  src/pages/api/files/[...path].ts   (params: path=docs/a.pdf)
 ```
 
 ---
@@ -112,14 +137,26 @@ fetch('/api/users', { method: 'DELETE' })
 import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = async ({ request }) => {
-  const users = await db.users.findAll();
-  return new Response(JSON.stringify(users));
+  return new Response(JSON.stringify(await getUsers()));
 };
 
 export const POST: APIRoute = async ({ request }) => {
   const body = await request.json();
-  const user = await db.users.create(body);
-  return new Response(JSON.stringify(user), { status: 201 });
+  return new Response(JSON.stringify(await createUser(body)), { status: 201 });
+};
+```
+
+### SvelteKit server route (`src/routes/api/users/+server.ts`)
+```ts
+import type { RequestHandler } from '@sveltejs/kit';
+
+export const GET: RequestHandler = async ({ request }) => {
+  return new Response(JSON.stringify(await getUsers()));
+};
+
+export const POST: RequestHandler = async ({ request }) => {
+  const body = await request.json();
+  return new Response(JSON.stringify(await createUser(body)), { status: 201 });
 };
 ```
 
@@ -152,23 +189,13 @@ export async function POST(request: Request) {
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Compile TypeScript
-npm run compile
-
-# Watch mode
-npm run watch
-
-# Run tests
-npm test
-
-# Package the extension
-npm run package
+npm install          # install dependencies
+npm run watch        # recompile on save
+npm test             # run tests
+npx vsce package --no-dependencies --allow-missing-repository  # build .vsix
 ```
 
-Press **F5** in VS Code to launch an Extension Development Host with the extension loaded.
+Press **F5** in VS Code to open an Extension Development Host with the extension loaded.
 
 ---
 
