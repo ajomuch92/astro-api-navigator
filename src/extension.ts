@@ -15,6 +15,7 @@ const SUPPORTED_LANGUAGES = [
   'typescriptreact',
   'javascriptreact',
   'vue',
+  'svelte',
   'astro',
 ];
 
@@ -146,8 +147,15 @@ class AstroApiHoverProvider implements vscode.HoverProvider {
       resolved.params
     );
 
+    let interpolationNote = '';
+    if (apiCall.hasInterpolations) {
+      interpolationNote =
+        `\n\n💡 Template literal detected: \`${apiCall.rawUrl}\`\n` +
+        `Route resolved using static skeleton: \`${apiCall.apiPath}\``;
+    }
+
     const md = new vscode.MarkdownString(
-      `**Astro API Navigator**\n\n${description}\n\n` +
+      `**Astro API Navigator**\n\n${description}${interpolationNote}\n\n` +
       `📄 \`${relativePath}\`\n\n` +
       `*Ctrl+Click to navigate*`
     );
