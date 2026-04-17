@@ -22,6 +22,7 @@
     "workspaceContains:src/pages/api/**"
   ],
   "main": "./dist/extension.js",
+  "icon": "images/icon.png",
   "contributes": {
     "configuration": {
       "title": "Astro API Navigator",
