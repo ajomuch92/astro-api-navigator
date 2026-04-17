@@ -11,6 +11,12 @@
   "categories": [
     "Other"
   ],
+  "author": {
+    "name": "ajomuch92"
+  },
+  "repository": {
+    "url": "https://github.com/ajomuch92/astro-api-navigator"
+  },
   "keywords": [
     "astro",
     "api",
