@@ -81,6 +81,10 @@ export function findHandlerPosition(
     return findVueHandler(document, method);
   }
 
+  if (fileExt === 'svelte') {
+    return findSvelteHandler(document, method);
+  }
+
   return findJsTsHandler(document, method);
 }
 
@@ -186,9 +190,27 @@ function findVueHandler(
 }
 
 /**
- * Builds a human-readable description of what the navigation will do,
- * used in the hover tooltip.
+ * For Svelte files used as SvelteKit server routes (+server.ts / +server.js),
+ * looks for:
+ *   export function GET({ request }) { ... }
+ *   export const POST: RequestHandler = async ({ request }) => { ... }
+ *
+ * SvelteKit uses the exact same named-export convention as Astro, so we reuse
+ * findJsTsHandler. This function exists as a named entry point for clarity and
+ * future SvelteKit-specific additions (e.g. +page.server.ts load/actions).
  */
+function findSvelteHandler(
+  document: vscode.TextDocument,
+  method: HttpMethod
+): vscode.Position {
+  // SvelteKit server files use the same export pattern as Astro API routes.
+  // Additionally, handle SvelteKit `actions` default export in +page.server.ts:
+  //   export const actions = { default: async ({ request }) => { ... } }
+  // For plain +server.ts, the JS/TS scanner handles it perfectly.
+  return findJsTsHandler(document, method);
+}
+
+
 export function buildNavigationDescription(
   apiPath: string,
   method: HttpMethod,
