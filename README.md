@@ -1,71 +1,177 @@
-# astro-api-navigator README
+# Astro API Navigator
 
-This is the README for your extension "astro-api-navigator". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+> **Ctrl+Click on any API call → jump directly to the handler** in your Astro (or Nuxt/Next.js) project.
 
 ---
 
-## Following extension guidelines
+## Features
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+- **Ctrl+Click navigation** from any API call to its handler function
+- **Smart HTTP method detection** — jumps to `GET`, `POST`, `PUT`, `PATCH`, or `DELETE` export specifically
+- **Dynamic route support** — resolves `/api/users/42` → `pages/api/users/[id].ts`
+- **Catch-all routes** — resolves `/api/files/a/b/c` → `pages/api/files/[...path].ts`
+- **Hover tooltips** showing the resolved file, method, and dynamic params
+- **Underline decoration** on all resolvable API URLs in the editor
+- **Multi-framework support**:
+  - Astro (`src/pages/api/`)
+  - Nuxt 3 (`server/api/`) ← configure via settings
+  - Next.js App Router (`app/api/`) ← configure via settings
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+### Supported call patterns
 
-## Working with Markdown
+| Pattern | Example |
+|---|---|
+| `fetch()` | `fetch('/api/users')` |
+| `$fetch()` | `$fetch('/api/users', { method: 'POST' })` |
+| `axios.method()` | `axios.get('/api/posts/1')` |
+| `axios({ url })` | `axios({ url: '/api/posts', method: 'PUT' })` |
+| `useFetch()` | `useFetch('/api/data')` |
+| `useQuery()` | `useQuery(['key', '/api/items'])` |
+| `useSWR()` | `useSWR('/api/profile', fetcher)` |
+| `ky` | `ky.post('/api/submit').json()` |
+| `wretch` | `wretch('/api/upload').post(data)` |
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+### Supported file types
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+Works when editing `.ts`, `.js`, `.tsx`, `.jsx`, `.vue`, and `.astro` files.
 
-## For more information
+---
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## Usage
 
-**Enjoy!**
+1. Open any file that makes API calls (component, page, store, etc.)
+2. **Hover** over an `/api/...` URL to preview where it leads
+3. **Ctrl+Click** (or **F12** with cursor on the URL) to jump there
+
+The extension opens the handler file and positions the cursor at the correct exported function.
+
+---
+
+## Configuration
+
+| Setting | Default | Description |
+|---|---|---|
+| `astroApiNavigator.pagesDir` | `src/pages` | Path to Astro pages directory |
+
+### Examples for other frameworks
+
+**Nuxt 3** (server routes in `server/api/`):
+```json
+{
+  "astroApiNavigator.pagesDir": "server"
+}
+```
+
+**Next.js App Router** (`app/api/`):
+```json
+{
+  "astroApiNavigator.pagesDir": "app"
+}
+```
+
+---
+
+## Project structure examples
+
+### Static routes
+```
+fetch('/api/users')           →  src/pages/api/users.ts
+fetch('/api/health')          →  src/pages/api/health.js
+fetch('/api/posts')           →  src/pages/api/posts/index.ts
+```
+
+### Dynamic routes
+```
+fetch('/api/posts/42')        →  src/pages/api/posts/[id].ts       (params: id=42)
+fetch('/api/users/7/comments')→  src/pages/api/users/[id]/comments.ts  (params: id=7)
+```
+
+### Catch-all routes
+```
+fetch('/api/files/docs/a.pdf')→  src/pages/api/files/[...path].ts  (params: path=docs/a.pdf)
+```
+
+### HTTP method detection
+```ts
+// In your component:
+axios.post('/api/users', data)
+//         ^^^^^^^^^^^
+//         Ctrl+Click → jumps to `export function POST(...)` in users.ts
+
+fetch('/api/users', { method: 'DELETE' })
+//         ^^^^^^^^^^^
+//         Ctrl+Click → jumps to `export function DELETE(...)` in users.ts
+```
+
+---
+
+## Handler file examples
+
+### Astro API route (`src/pages/api/users.ts`)
+```ts
+import type { APIRoute } from 'astro';
+
+export const GET: APIRoute = async ({ request }) => {
+  const users = await db.users.findAll();
+  return new Response(JSON.stringify(users));
+};
+
+export const POST: APIRoute = async ({ request }) => {
+  const body = await request.json();
+  const user = await db.users.create(body);
+  return new Response(JSON.stringify(user), { status: 201 });
+};
+```
+
+### Nuxt 3 server route (`server/api/users.ts`)
+```ts
+export default defineEventHandler(async (event) => {
+  const method = getMethod(event);
+  if (method === 'POST') {
+    const body = await readBody(event);
+    return await createUser(body);
+  }
+  return await getUsers();
+});
+```
+
+### Next.js App Router (`app/api/users/route.ts`)
+```ts
+export async function GET(request: Request) {
+  return Response.json(await getUsers());
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  return Response.json(await createUser(body), { status: 201 });
+}
+```
+
+---
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Compile TypeScript
+npm run compile
+
+# Watch mode
+npm run watch
+
+# Run tests
+npm test
+
+# Package the extension
+npm run package
+```
+
+Press **F5** in VS Code to launch an Extension Development Host with the extension loaded.
+
+---
+
+## License
+
+MIT
